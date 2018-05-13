@@ -1495,6 +1495,10 @@ static inline int gpio_input_init(const struct device * const dev,
 	return r;
 }
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+extern int get_nfc_support(void);
+#endif
+
 static int nqx_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -1504,6 +1508,15 @@ static int nqx_probe(struct i2c_client *client,
 	struct nqx_dev *nqx_dev;
 
 	dev_dbg(&client->dev, "%s: enter\n", __func__);
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	if (get_nfc_support() != 1) {
+		r = -ENODEV;
+		dev_err(&client->dev, "%s: exit due to nfc not support\n", __func__);
+		goto err_no_support_nfc;
+	}
+#endif
+
 	if (client->dev.of_node) {
 		platform_data = devm_kzalloc(&client->dev,
 			sizeof(struct nqx_platform_data), GFP_KERNEL);
@@ -1818,6 +1831,9 @@ err_platform_data:
 	dev_err(&client->dev,
 	"%s: probing nqxx failed, check hardware\n",
 		 __func__);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+err_no_support_nfc:
+#endif
 	return r;
 }
 
