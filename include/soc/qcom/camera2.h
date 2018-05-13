@@ -49,6 +49,10 @@ struct msm_camera_slave_info {
 	uint16_t sensor_id;
 	uint16_t sensor_id_mask;
 	struct msm_camera_i2c_reg_setting *setting;
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	uint8_t camera_id;
+	uint8_t module_id;
+#endif
 };
 
 struct msm_cam_clk_info {
