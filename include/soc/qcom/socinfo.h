@@ -96,6 +96,10 @@ enum socinfo_parttype {
 #define of_board_is_xpm()	of_machine_is_compatible("qcom,xpm")
 #define of_board_is_skuf()	of_machine_is_compatible("qcom,skuf")
 #define of_board_is_sbc()	of_machine_is_compatible("qcom,sbc")
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#define of_board_is_sdm630()  of_machine_is_compatible("qcom,sdm630")
+#define of_board_is_sdm660()  of_machine_is_compatible("qcom,sdm660")
+#endif
 
 #define machine_is_msm8974()	of_machine_is_compatible("qcom,msm8974")
 
