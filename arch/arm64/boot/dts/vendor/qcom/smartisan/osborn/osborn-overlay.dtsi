@@ -96,6 +96,7 @@
 
 &firmware {
 	android {
+		/delete-node/ vbmeta;
 		compatible = "android,firmware";
 		fstab {
 			compatible = "android,fstab";
