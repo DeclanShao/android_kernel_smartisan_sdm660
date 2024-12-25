@@ -428,4 +428,16 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+config MACH_SMARTISAN_SDM660
+    bool "Smartisan SDM660"
+	select ARCH_SDM660
+	help
+	  This enables support for Smartisan SDM660
+
+config MACH_SMARTISAN_OSBORN
+    bool "Smartisan U3 Pro"
+	select MACH_SMARTISAN_SDM660
+	help
+	  This enables support for Smartisan U3 Pro
+
 endmenu
