@@ -30,7 +30,7 @@
 	    qcom,lut-flags = <0x1f>;
 	    qcom,ramp-step-ms = <34>;
 	    qcom,use-blink;
-	}
+	};
 
 	green {
         qcom,start-idx = <0>;
@@ -43,7 +43,7 @@
 	    qcom,lut-flags = <0x1f>;
 	    qcom,ramp-step-ms = <34>;
 	    qcom,use-blink;
-	}
+	};
 
 	blue {
         qcom,start-idx = <0>;
@@ -56,6 +56,6 @@
 	    qcom,lut-flags = <0x1f>;
 	    qcom,ramp-step-ms = <34>;
 	    qcom,use-blink;
-	}
+	};
 }
 
