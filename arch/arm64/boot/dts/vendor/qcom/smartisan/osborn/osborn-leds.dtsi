@@ -57,5 +57,5 @@
 	    qcom,ramp-step-ms = <34>;
 	    qcom,use-blink;
 	};
-}
+};
 
