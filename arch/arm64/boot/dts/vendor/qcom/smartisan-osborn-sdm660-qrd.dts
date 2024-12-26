@@ -14,6 +14,7 @@
 /dts-v1/;
 
 #include "sdm660.dtsi"
+#include "sdm660-qrd.dtsi"
 #include "sdm660-internal-codec.dtsi"
 #include "smartisan/osborn/osborn-overlay.dtsi"
 
