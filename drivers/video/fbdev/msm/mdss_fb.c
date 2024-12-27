@@ -49,6 +49,10 @@
 
 #include "mdss_livedisplay.h"
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#include "mdss_dsi.h"
+#endif
+
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
 #else
@@ -84,6 +88,32 @@ static u32 mdss_fb_pseudo_palette[16] = {
 	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
 	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 };
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+static u32 gamma_luminance_TM[] = {
+	0,    10,    21,   38,   138,  168,  190,  270,
+	340,  410,  490,  550,  600,  680,  810,  900,
+	1005,  1135,  1245, 1385, 1529, 1672, 1845, 2030,
+	2230, 2425, 2633, 2799, 3123, 3304, 3534, 3786,
+	4095
+};
+static u32 gamma_luminance_TXD[] = {
+	0,    12,    24,   43,   146,  168,  190,  275,
+	354,  425,  515,  568,  620,  712,  845,  945,
+	1055,  1195,  1315, 1442, 1599, 1762, 1948, 2125,
+	2265, 2475, 2673, 2820, 3120, 3300, 3530, 3780,
+	4095
+};
+static u32 gamma_luminance_BOE[] = {
+	0,    12,    24,   43,   148,  170,  193,  278,
+	358,  430,  518,  573,  626,  719,  855,  958,
+	1060,  1200,  1330, 1465, 1640, 1778, 1988, 2160,
+	2315, 2518, 2730, 2865, 3165, 3360, 3590, 3845,
+	4095
+};
+extern int lcd_id;
+int brightnes_set_value = 0;
+#endif
 
 static struct msm_mdp_interface *mdp_instance;
 
@@ -272,6 +302,9 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 {
 	struct msm_fb_data_type *mfd = dev_get_drvdata(led_cdev->dev->parent);
 	u64 bl_lvl;
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	int temp;
+#endif
 
 	if (mfd->boot_notification_led) {
 		led_trigger_event(mfd->boot_notification_led, 0);
@@ -280,6 +313,12 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 
 	if (value > mfd->panel_info->brightness_max)
 		value = mfd->panel_info->brightness_max;
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	if (value > 0 && value < 10)
+		value = 10;
+	brightnes_set_value = value;
+#endif
 
 	/* This maps android backlight level 0 to 255 into
 	 * driver backlight level 0 to bl_max with rounding
@@ -290,6 +329,22 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 	if (!bl_lvl && value)
 		bl_lvl = 1;
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	temp = value / 8;
+	if (value < 255) {
+		if (lcd_id == 11)
+			bl_lvl = gamma_luminance_TM[temp] + (gamma_luminance_TM[temp + 1] - gamma_luminance_TM[temp]) * (value % 8) / 8;
+		else if (lcd_id == 12)
+			bl_lvl = gamma_luminance_TXD[temp] + (gamma_luminance_TXD[temp + 1] - gamma_luminance_TXD[temp]) * (value % 8) / 8;
+		else if (lcd_id == 13)
+			bl_lvl = gamma_luminance_BOE[temp] + (gamma_luminance_BOE[temp + 1] - gamma_luminance_BOE[temp]) * (value % 8) / 8;
+		else
+			pr_info("incorrect panel id for osborn backlight selection\n");
+	} else {
+		bl_lvl = 4095;
+	}
+#endif
+
 	if (!IS_CALIB_MODE_BL(mfd) && (!mfd->ext_bl_ctrl || !value ||
 							!mfd->bl_level)) {
 		mutex_lock(&mfd->bl_lock);
@@ -298,6 +353,14 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 	}
 	mfd->bl_level_usr = bl_lvl;
 }
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+static enum led_brightness mdss_fb_get_bl_brightness(
+	struct led_classdev *led_cdev)
+{
+	return brightnes_set_value;
+}
+#else
 
 static enum led_brightness mdss_fb_get_bl_brightness(
 	struct led_classdev *led_cdev)
@@ -310,6 +373,7 @@ static enum led_brightness mdss_fb_get_bl_brightness(
 
 	return value;
 }
+#endif
 
 static struct led_classdev backlight_led = {
 	.name           = "lcd-backlight",
@@ -870,6 +934,48 @@ static ssize_t msm_fb_dfps_mode_show(struct device *dev,
 	return ret;
 }
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+static ssize_t mdss_fb_get_panelid(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = scnprintf(buf, PAGE_SIZE, "%d", lcd_id);
+	return ret;
+}
+static ssize_t mdss_fb_get_panel_regid(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int ret;
+	char rx_buf;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct mdss_panel_data *pdata;
+	char panel1 = 0xda;
+	char panel2 = 0x00;
+	int len = 1;
+	pdata = dev_get_platdata(&mfd->pdev->dev);
+	if (!pdata) {
+		pr_err("no panel connected!\n");
+		return ret;
+	}
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata, panel_data);
+	mdss_dsi_panel_cmd_read(ctrl_pdata, panel1, panel2, NULL, &rx_buf, len);
+	if(rx_buf == 0x80)
+		rx_buf = 11;
+	else if(rx_buf == 0x81)
+		rx_buf = 12;
+	else if(rx_buf == 0x82)
+		rx_buf = 13;
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", rx_buf);
+	return ret;
+}
+#endif
+
 static ssize_t msm_fb_persist_mode_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t len)
 {
@@ -958,6 +1064,10 @@ static DEVICE_ATTR_RW(msm_fb_dfps_mode);
 static DEVICE_ATTR_RO(measured_fps);
 static DEVICE_ATTR_RW(msm_fb_persist_mode);
 static DEVICE_ATTR_RO(idle_power_collapse);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+static DEVICE_ATTR(show_panel_id, S_IRUGO , mdss_fb_get_panelid, NULL);
+static DEVICE_ATTR(show_panel_regid, S_IRUGO , mdss_fb_get_panel_regid, NULL);
+#endif
 
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
@@ -974,6 +1084,10 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_measured_fps.attr,
 	&dev_attr_msm_fb_persist_mode.attr,
 	&dev_attr_idle_power_collapse.attr,
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	&dev_attr_show_panel_id.attr,
+	&dev_attr_show_panel_regid.attr,
+#endif
 	NULL,
 };
 
@@ -1895,6 +2009,11 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 	int ret = 0;
 	int cur_power_state, current_bl;
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	struct fb_event event;
+	event.info = mfd->fbi;
+#endif
+
 	if (!mfd)
 		return -EINVAL;
 
@@ -1910,6 +2029,13 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 		pr_debug("No change in power state\n");
 		return 0;
 	}
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	if (mfd->index == 0) {
+		printk("call LCD_EVENT_OFF by fb\n");
+		fb_notifier_call_chain(LCD_EVENT_OFF, &event);
+	}
+#endif
 
 	mutex_lock(&mfd->update.lock);
 	mfd->update.type = NOTIFY_TYPE_SUSPEND;
@@ -1950,6 +2076,11 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 {
 	int ret = 0;
 	int cur_power_state;
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	struct fb_event event;
+	event.info = mfd->fbi;
+#endif
 
 	if (!mfd)
 		return -EINVAL;
@@ -2029,6 +2160,13 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 		}
 		mutex_unlock(&mfd->bl_lock);
 	}
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	if (mfd->index == 0) {
+		printk("call LCD_EVENT_ON by fb\n");
+		fb_notifier_call_chain(LCD_EVENT_ON, &event);
+	}
+#endif
 
 error:
 	return ret;
