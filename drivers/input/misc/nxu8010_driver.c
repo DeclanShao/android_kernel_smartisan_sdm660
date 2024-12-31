@@ -875,24 +875,24 @@ static ssize_t fastmmi_show(struct device_driver *drv, char *buf)
 static DRIVER_ATTR_RW(reg);
 static DRIVER_ATTR_RW(regvalue);
 
-static DRIVER_ATTR_RW(level1);
-static DRIVER_ATTR_RW(level2);
+static DRIVER_ATTR_RO(level1);
+static DRIVER_ATTR_RO(level2);
 
-static DRIVER_ATTR_RW(values);
-static DRIVER_ATTR_RW(values2);
+static DRIVER_ATTR_RO(values);
+static DRIVER_ATTR_RO(values2);
 
-static DRIVER_ATTR_RW(chipid);
+static DRIVER_ATTR_RO(chipid);
 
-static DRIVER_ATTR_RW(poweron);
-static DRIVER_ATTR_RW(readdata);
-static DRIVER_ATTR_RW(poweroff);
+static DRIVER_ATTR_RO(poweron);
+static DRIVER_ATTR_RO(readdata);
+static DRIVER_ATTR_RO(poweroff);
 
-static DRIVER_ATTR_RW(code);
-static DRIVER_ATTR_RW(sleep);
-static DRIVER_ATTR_RW(awake);
-static DRIVER_ATTR_RW(adcon);
-static DRIVER_ATTR_RW(adcoff);
-static DRIVER_ATTR_RW(fastmmi);
+static DRIVER_ATTR_RO(code);
+static DRIVER_ATTR_RO(sleep);
+static DRIVER_ATTR_RO(awake);
+static DRIVER_ATTR_RO(adcon);
+static DRIVER_ATTR_RO(adcoff);
+static DRIVER_ATTR_RO(fastmmi);
 
 #define NXU8010_IOCTL_INIT				_IO('n', 0x01)
 #define NXU8010_IOCTL_G_DATA			_IOR('n', 0x02, unsigned char)
