@@ -935,14 +935,14 @@ static ssize_t msm_fb_dfps_mode_show(struct device *dev,
 }
 
 #ifdef CONFIG_MACH_SMARTISAN_SDM660
-static ssize_t mdss_fb_get_panelid(struct device *dev,
+static ssize_t show_panel_id_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	int ret;
 	ret = scnprintf(buf, PAGE_SIZE, "%d", lcd_id);
 	return ret;
 }
-static ssize_t mdss_fb_get_panel_regid(struct device *dev,
+static ssize_t show_panel_regid_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	int ret;
@@ -1065,8 +1065,8 @@ static DEVICE_ATTR_RO(measured_fps);
 static DEVICE_ATTR_RW(msm_fb_persist_mode);
 static DEVICE_ATTR_RO(idle_power_collapse);
 #ifdef CONFIG_MACH_SMARTISAN_SDM660
-static DEVICE_ATTR(show_panel_id, S_IRUGO , mdss_fb_get_panelid, NULL);
-static DEVICE_ATTR(show_panel_regid, S_IRUGO , mdss_fb_get_panel_regid, NULL);
+static DEVICE_ATTR_RO(show_panel_id);
+static DEVICE_ATTR_RO(show_panel_regid);
 #endif
 
 static struct attribute *mdss_fb_attrs[] = {
