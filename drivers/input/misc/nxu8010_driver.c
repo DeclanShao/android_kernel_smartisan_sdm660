@@ -350,19 +350,19 @@ static int nxu8010_init(void)
     return check;
 }
 
-static ssize_t store_reg(struct device_driver *drv, const char *buf, size_t count)
+static ssize_t reg_store(struct device_driver *drv, const char *buf, size_t count)
 {
 ///	int len = 0;
 	int reg_addr = 0x0;
 	int reg_val = 0x0;
 
-	NXU8010DB("[NXU8010] store_reg=%s\n", buf);
+	NXU8010DB("[NXU8010] reg_store=%s\n", buf);
 	sscanf(buf, "0x%x 0x%x", &reg_addr, &reg_val);
 	nxu8010_write((u8)reg_addr, (u8)reg_val);
 	return count;
 }
 
-static ssize_t show_reg(struct device_driver *drv, char *buf)
+static ssize_t reg_show(struct device_driver *drv, char *buf)
 {
 	int ret = 0;
 	int len = 0;
@@ -384,12 +384,12 @@ static ssize_t show_reg(struct device_driver *drv, char *buf)
 
 
 static int gRegValueAddr = 0;
-static ssize_t store_regvalue(struct device_driver *drv, const char *buf, size_t count)
+static ssize_t regvalue_store(struct device_driver *drv, const char *buf, size_t count)
 {
 ///	int len = 0;
 	int reg_addr = 0x0;
 
-	NXU8010DB("[NXU8010] store_regvalue=%s\n", buf);
+	NXU8010DB("[NXU8010] regvalue_store=%s\n", buf);
 	sscanf(buf, "0x%x", &reg_addr);
 	//nxu8010_write((u8)reg_addr, (u8)reg_val);
 	gRegValueAddr = reg_addr;
@@ -397,7 +397,7 @@ static ssize_t store_regvalue(struct device_driver *drv, const char *buf, size_t
 	return count;
 }
 
-static ssize_t show_regvalue(struct device_driver *drv, char *buf)
+static ssize_t regvalue_show(struct device_driver *drv, char *buf)
 {
 	int len = 0;
 	u8 read_buf = 0;
@@ -410,7 +410,7 @@ static ssize_t show_regvalue(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_level1(struct device_driver *drv, char *buf)
+static ssize_t level1_show(struct device_driver *drv, char *buf)
 {
 	int ret = 0;
 	int len = 0;
@@ -430,7 +430,7 @@ static ssize_t show_level1(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_level2(struct device_driver *drv, char *buf)
+static ssize_t level2_show(struct device_driver *drv, char *buf)
 {
 	int ret = 0;
 	int len = 0;
@@ -503,7 +503,7 @@ static int nxu8010_power_down(struct nxu8010_data *data)
     return rc;
 }
 
-static ssize_t show_values(struct device_driver *drv, char *buf)
+static ssize_t values_show(struct device_driver *drv, char *buf)
 {
 	u8 read_buf[2] = {0,};
 	int len = 0;
@@ -586,7 +586,7 @@ static ssize_t show_values(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_poweron(struct device_driver *drv, char *buf)
+static ssize_t poweron_show(struct device_driver *drv, char *buf)
 {
 	int ret = 0, i = 0, len = 0;
 
@@ -613,7 +613,7 @@ static ssize_t show_poweron(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_poweroff(struct device_driver *drv, char *buf)
+static ssize_t poweroff_show(struct device_driver *drv, char *buf)
 {
 	int len = 0;
 	NXU8010_FUNC_ENTER();
@@ -626,7 +626,7 @@ static ssize_t show_poweroff(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_readdata(struct device_driver *drv, char *buf)
+static ssize_t readdata_show(struct device_driver *drv, char *buf)
 {
 	u8 read_buf[2] = {0,};
 	int len = 0;
@@ -689,7 +689,7 @@ read_data_failed:
 	return len;
 }
 
-static ssize_t show_values2(struct device_driver *drv, char *buf)
+static ssize_t values2_show(struct device_driver *drv, char *buf)
 {
 	u8 read_buf[2] = {0,};
 	int len = 0;
@@ -725,7 +725,7 @@ static ssize_t show_values2(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_chipid(struct device_driver *drv, char *buf)
+static ssize_t chipid_show(struct device_driver *drv, char *buf)
 {
 	u8 read_buf = 0;
 	int ret = 0, i = 0, len = 0;
@@ -763,20 +763,20 @@ static ssize_t show_chipid(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_code(struct device_driver *drv, char *buf)
+static ssize_t code_show(struct device_driver *drv, char *buf)
 {
 	u8 read_buf = 0;
 	int len = 0;
 	nxu8010_read(CORRELATION_CODE, &read_buf);
 
-	NXU8010DB("[NXU8010] show_code 0x%02x\n", (int)read_buf);
+	NXU8010DB("[NXU8010] code_show 0x%02x\n", (int)read_buf);
 
 	len = snprintf(buf, 16, "0x%02x\n", (int)read_buf);
 
 	return len;
 }
 
-static ssize_t show_sleep(struct device_driver *drv, char *buf)
+static ssize_t sleep_show(struct device_driver *drv, char *buf)
 {
 	int ret = 0;
 	int len = 0;
@@ -796,7 +796,7 @@ static ssize_t show_sleep(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_awake(struct device_driver *drv, char *buf)
+static ssize_t awake_show(struct device_driver *drv, char *buf)
 {
 	int ret = 0;
 	int len = 0;
@@ -816,7 +816,7 @@ static ssize_t show_awake(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_adcon(struct device_driver *drv, char *buf)
+static ssize_t adcon_show(struct device_driver *drv, char *buf)
 {
 	int ret = 0;
 	int len = 0;
@@ -836,7 +836,7 @@ static ssize_t show_adcon(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static ssize_t show_adcoff(struct device_driver *drv, char *buf)
+static ssize_t adcoff_show(struct device_driver *drv, char *buf)
 {
 	int ret = 0;
 	int len = 0;
@@ -857,7 +857,7 @@ static ssize_t show_adcoff(struct device_driver *drv, char *buf)
 }
 
 
-static ssize_t show_fastmmi(struct device_driver *drv, char *buf)
+static ssize_t fastmmi_show(struct device_driver *drv, char *buf)
 {
 	u8 read_buf = 0;
 	int len = 0;
@@ -872,27 +872,27 @@ static ssize_t show_fastmmi(struct device_driver *drv, char *buf)
 	return len;
 }
 
-static DRIVER_ATTR(reg, S_IWUSR | S_IRUGO, show_reg, store_reg);
-static DRIVER_ATTR(regvalue, S_IWUSR | S_IRUGO, show_regvalue, store_regvalue);
+static DRIVER_ATTR_RW(reg);
+static DRIVER_ATTR_RW(regvalue);
 
-static DRIVER_ATTR(level1, S_IWUSR | S_IRUGO, show_level1, NULL);
-static DRIVER_ATTR(level2, S_IWUSR | S_IRUGO, show_level2, NULL);
+static DRIVER_ATTR_RW(level1);
+static DRIVER_ATTR_RW(level2);
 
-static DRIVER_ATTR(values, S_IWUSR | S_IRUGO, show_values, NULL);
-static DRIVER_ATTR(values2, S_IWUSR | S_IRUGO, show_values2, NULL);
+static DRIVER_ATTR_RW(values);
+static DRIVER_ATTR_RW(values2);
 
-static DRIVER_ATTR(chipid, S_IWUSR | S_IRUGO, show_chipid, NULL);
+static DRIVER_ATTR_RW(chipid);
 
-static DRIVER_ATTR(poweron, S_IWUSR | S_IRUGO, show_poweron, NULL);
-static DRIVER_ATTR(readdata, S_IWUSR | S_IRUGO, show_readdata, NULL);
-static DRIVER_ATTR(poweroff, S_IWUSR | S_IRUGO, show_poweroff, NULL);
+static DRIVER_ATTR_RW(poweron);
+static DRIVER_ATTR_RW(readdata);
+static DRIVER_ATTR_RW(poweroff);
 
-static DRIVER_ATTR(code, S_IWUSR | S_IRUGO, show_code, NULL);
-static DRIVER_ATTR(sleep, S_IWUSR | S_IRUGO, show_sleep, NULL);
-static DRIVER_ATTR(awake, S_IWUSR | S_IRUGO, show_awake, NULL);
-static DRIVER_ATTR(adcon, S_IWUSR | S_IRUGO, show_adcon, NULL);
-static DRIVER_ATTR(adcoff, S_IWUSR | S_IRUGO, show_adcoff, NULL);
-static DRIVER_ATTR(fastmmi, S_IWUSR | S_IRUGO, show_fastmmi, NULL);
+static DRIVER_ATTR_RW(code);
+static DRIVER_ATTR_RW(sleep);
+static DRIVER_ATTR_RW(awake);
+static DRIVER_ATTR_RW(adcon);
+static DRIVER_ATTR_RW(adcoff);
+static DRIVER_ATTR_RW(fastmmi);
 
 #define NXU8010_IOCTL_INIT				_IO('n', 0x01)
 #define NXU8010_IOCTL_G_DATA			_IOR('n', 0x02, unsigned char)
