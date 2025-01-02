@@ -7,9 +7,9 @@
 #include <linux/timer.h>
 #include <linux/err.h>
 #include <linux/kobject.h>
-#include <soc/qcom/smem.h>
-#include <soc/qcom/socinfo.h>
-#include <soc/qcom/boot_stats.h>
+#include <linux/soc/qcom/smem.h>
+#include <linux/soc/qcom/socinfo.h>
+#include <linux/qcom/boot_stats.h>
 #include <asm-generic/bug.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
