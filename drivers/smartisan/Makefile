@@ -1,1 +1,1 @@
-obj-y += hwinfo.o
+obj-$(CONFIG_SMARTISAN_HWINFO) += hwinfo.o

@@ -1,0 +1,5 @@
+config SMARTISAN_HWINFO
+	int "smartisan hwinfo"
+	default m
+	---help---
+	  This option enables basic support for smartisan device.
