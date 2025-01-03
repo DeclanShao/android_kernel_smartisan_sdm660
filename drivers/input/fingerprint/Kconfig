@@ -5,6 +5,6 @@ menuconfig INPUT_FINGERPRINT
     Say Y to can config finperprint manufacturer
 
 if  INPUT_FINGERPRINT
-    source "drivers/fingerprint/fpc/Kconfig"
-    source "drivers/fingerprint/goodix/Kconfig"
+    source "drivers/input/fingerprint/fpc/Kconfig"
+    source "drivers/input/fingerprint/goodix/Kconfig"
 endif
