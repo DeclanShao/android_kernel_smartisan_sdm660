@@ -380,6 +380,26 @@ out_micb_en:
 	return 0;
 }
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+static void wcd_cancel_fixup_hs_work(struct wcd_mbhc *mbhc)
+{
+	int r;
+	WCD_MBHC_RSC_UNLOCK(mbhc);
+	r = cancel_delayed_work_sync(&mbhc->mbhc_fixup_dwork);
+	/*
+	 * if scheduled mbhc.mbhc_fixup_dwork is canceled falserom here,
+	 * we have to unlock from here instead fixup_work
+	 */
+	if (r) {
+		pr_debug("%s: fixup_work is canceled\n",
+			 __func__);
+		mbhc->mbhc_cb->lock_sleep(mbhc, false);
+	}
+	WCD_MBHC_RSC_LOCK(mbhc);
+}
+EXPORT_SYMBOL(wcd_cancel_fixup_hs_work);
+#endif
+
 int wcd_cancel_btn_work(struct wcd_mbhc *mbhc)
 {
 	int r;
@@ -739,6 +759,12 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 
 		pr_debug("%s: Reporting insertion %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+		if ((mbhc->hph_status & SND_JACK_HEADSET) == SND_JACK_HEADSET)
+			mbhc->micbias_enable = true;
+		else
+			mbhc->micbias_enable = false;
+#endif
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				    (mbhc->hph_status | SND_JACK_MECHANICAL),
 				    WCD_MBHC_JACK_MASK);
@@ -927,6 +953,10 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 	else
 		pr_info("%s: hs_detect_plug work not cancelled\n", __func__);
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	wcd_cancel_fixup_hs_work(mbhc);
+#endif
+
 	/* Enable micbias ramp */
 	if (mbhc->mbhc_cb->mbhc_micb_ramp_control)
 		mbhc->mbhc_cb->mbhc_micb_ramp_control(component, true);
@@ -937,7 +967,10 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 
 	if ((mbhc->current_plug == MBHC_PLUG_TYPE_NONE) &&
 	    detection_type) {
-
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+		/*allow sometime schedule hs detect*/
+		msleep(200);
+#endif
 		/* If moisture is present, then enable polling, disable
 		 * moisture detection and wait for interrupt
 		 */
@@ -969,6 +1002,9 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 			mbhc->mbhc_cb->enable_mb_source(mbhc, true);
 		mbhc->btn_press_intr = false;
 		mbhc->is_btn_press = false;
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+		atomic_set(&mbhc->not_fixup, 0);
+#endif
 		if (mbhc->mbhc_fn)
 			mbhc->mbhc_fn->wcd_mbhc_detect_plug_type(mbhc);
 	} else if ((mbhc->current_plug != MBHC_PLUG_TYPE_NONE)
@@ -1138,6 +1174,23 @@ static void wcd_btn_lpress_fn(struct work_struct *work)
 	mbhc->mbhc_cb->lock_sleep(mbhc, false);
 }
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+static void wcd_fixup_headset_fn(struct work_struct *work)
+{
+	struct delayed_work *dwork;
+	struct wcd_mbhc *mbhc;
+	pr_debug("%s: Enter\n", __func__);
+	dwork = to_delayed_work(work);
+	mbhc = container_of(dwork, struct wcd_mbhc, mbhc_fixup_dwork);
+	if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) {
+		pr_debug("%s: current is headphone, so cancel fix up headphone\n", __func__);
+		atomic_set(&mbhc->not_fixup, 1);
+	}
+	pr_debug("%s: leave\n", __func__);
+	mbhc->mbhc_cb->lock_sleep(mbhc, false);
+}
+#endif
+
 static bool wcd_mbhc_fw_validate(const void *data, size_t size)
 {
 	u32 cfg_offset;
@@ -1240,8 +1293,17 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 	 * in this case. So skip the check here.
 	 */
 	if (mbhc->mbhc_detection_logic == WCD_DETECTION_LEGACY &&
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+        mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE && !atomic_read(&mbhc->not_fixup)) {
+#else
 		mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) {
+#endif
 		wcd_mbhc_find_plug_and_report(mbhc, MBHC_PLUG_TYPE_HEADSET);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+		/* workaround: headset slow insertion */
+		if (mbhc->micbias_enable)
+			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
+#endif
 		goto exit;
 
 	}
@@ -1632,6 +1694,42 @@ static int wcd_mbhc_init_gpio(struct wcd_mbhc *mbhc,
 	return rc;
 }
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+extern struct wcd_mbhc_config *mbhc_cfg_ptr;
+bool get_switch_stat(void)
+{
+	struct usbc_ana_audio_config *config = &mbhc_cfg_ptr->usbc_analog_cfg;
+	if (!mbhc_cfg_ptr || !config->usbc_en1_gpio_p) {
+		pr_err("%s: mbhc_cfg_ptr: 0x%p, usbc_en1_gpio_p: 0x%p\n",
+			__func__, mbhc_cfg_ptr, config->usbc_en1_gpio_p);
+		return -EINVAL;
+	}
+	// 0 for sleep(usb), 1 for active(audio)
+	return !!msm_cdc_pinctrl_get_state(config->usbc_en1_gpio_p);
+}
+int set_switch_to_audio(bool audio)
+{
+	struct usbc_ana_audio_config *config = &mbhc_cfg_ptr->usbc_analog_cfg;
+	bool is_audio;
+	int rc = 0;
+	pr_info("%s audio: %d\n", __func__, audio);
+	if (!mbhc_cfg_ptr || !config->usbc_en1_gpio_p) {
+		pr_err("%s: mbhc_cfg_ptr: 0x%p, usbc_en1_gpio_p: 0x%p\n",
+			__func__, mbhc_cfg_ptr, config->usbc_en1_gpio_p);
+		return -EINVAL;
+	}
+	// 0 for sleep(usb), 1 for active(audio)
+	is_audio = msm_cdc_pinctrl_get_state(config->usbc_en1_gpio_p);
+	if (audio && !is_audio) // AUDIO
+		rc = msm_cdc_pinctrl_select_active_state(
+			config->usbc_en1_gpio_p);
+	else if (!audio && is_audio)  // USB
+		rc = msm_cdc_pinctrl_select_sleep_state(
+			config->usbc_en1_gpio_p);
+	return rc;
+}
+#endif
+
 static int wcd_mbhc_usb_c_analog_setup_gpios(struct wcd_mbhc *mbhc, bool active)
 {
 	int rc = 0;
@@ -1644,6 +1742,11 @@ static int wcd_mbhc_usb_c_analog_setup_gpios(struct wcd_mbhc *mbhc, bool active)
 
 	memset(&pval, 0, sizeof(pval));
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	if (!mbhc_cfg_ptr)
+		mbhc_cfg_ptr = mbhc->mbhc_cfg;
+#endif
+
 	if (active) {
 		pval.intval = POWER_SUPPLY_TYPEC_PR_SOURCE;
 		if (power_supply_set_property(mbhc->usb_psy,
@@ -1654,8 +1757,12 @@ static int wcd_mbhc_usb_c_analog_setup_gpios(struct wcd_mbhc *mbhc, bool active)
 			mbhc->usbc_force_pr_mode = true;
 
 		if (config->usbc_en1_gpio_p)
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+			rc = set_switch_to_audio(true);
+#else
 			rc = msm_cdc_pinctrl_select_active_state(
 					config->usbc_en1_gpio_p);
+#endif
 		if (rc == 0 && config->usbc_en2n_gpio_p)
 			rc = msm_cdc_pinctrl_select_active_state(
 					config->usbc_en2n_gpio_p);
@@ -1669,8 +1776,12 @@ static int wcd_mbhc_usb_c_analog_setup_gpios(struct wcd_mbhc *mbhc, bool active)
 			msm_cdc_pinctrl_select_sleep_state(
 				config->usbc_en2n_gpio_p);
 		if (config->usbc_en1_gpio_p)
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+			set_switch_to_audio(false); //true
+#else
 			msm_cdc_pinctrl_select_sleep_state(
 				config->usbc_en1_gpio_p);
+#endif
 		if (config->usbc_force_gpio_p)
 			msm_cdc_pinctrl_select_sleep_state(
 				config->usbc_force_gpio_p);
@@ -1728,6 +1839,13 @@ static int wcd_mbhc_usb_c_event_changed(struct notifier_block *nb,
 	switch (mode.intval) {
 	case POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER:
 	case POWER_SUPPLY_TYPEC_NONE:
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	case POWER_SUPPLY_TYPEC_SINK_DEBUG_ACCESSORY:
+#endif
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+		if (mode.intval != POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER)
+			mode.intval = POWER_SUPPLY_TYPEC_NONE;
+#endif
 			dev_dbg(component->dev, "%s: usbc_mode: %d; mode.intval: %d\n",
 				__func__, mbhc->usbc_mode, mode.intval);
 
@@ -2118,6 +2236,11 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_component *component,
 	mutex_init(&mbhc->hphl_pa_lock);
 	mutex_init(&mbhc->hphr_pa_lock);
 	init_completion(&mbhc->btn_press_compl);
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	atomic_set(&mbhc->not_fixup, 0);
+	INIT_DELAYED_WORK(&mbhc->mbhc_fixup_dwork, wcd_fixup_headset_fn);
+#endif
 
 	/* Register event notifier */
 	mbhc->nblock.notifier_call = wcd_event_notify;

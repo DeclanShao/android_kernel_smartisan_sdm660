@@ -130,10 +130,18 @@ do {                                                    \
 				  SND_JACK_BTN_2 | SND_JACK_BTN_3 | \
 				  SND_JACK_BTN_4 | SND_JACK_BTN_5)
 #define OCP_ATTEMPT 20
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#define HS_DETECT_PLUG_TIME_MS (2 * 1000)
+#else
 #define HS_DETECT_PLUG_TIME_MS (3 * 1000)
+#endif
 #define SPECIAL_HS_DETECT_TIME_MS (2 * 1000)
 #define MBHC_BUTTON_PRESS_THRESHOLD_MIN 250
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#define GND_MIC_SWAP_THRESHOLD 3
+#else
 #define GND_MIC_SWAP_THRESHOLD 4
+#endif
 #define GND_MIC_USBC_SWAP_THRESHOLD 2
 #define WCD_FAKE_REMOVAL_MIN_PERIOD_MS 100
 #define HS_VREF_MIN_VAL 1400
@@ -632,6 +640,10 @@ struct wcd_mbhc {
 	struct notifier_block psy_nb;
 	struct power_supply *usb_psy;
 	struct work_struct usbc_analog_work;
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	struct delayed_work mbhc_fixup_dwork;
+	atomic_t not_fixup;
+#endif
 };
 
 void wcd_mbhc_find_plug_and_report(struct wcd_mbhc *mbhc,
@@ -643,6 +655,9 @@ void wcd_enable_curr_micbias(const struct wcd_mbhc *mbhc,
 			     const enum wcd_mbhc_cs_mb_en_flag cs_mb_en);
 void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 			  struct snd_soc_jack *jack, int status, int mask);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+void wcd_cancel_fixup_hs_work(struct wcd_mbhc *mbhc);
+#endif
 int wcd_cancel_btn_work(struct wcd_mbhc *mbhc);
 int wcd_mbhc_get_button_mask(struct wcd_mbhc *mbhc);
 void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
