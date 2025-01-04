@@ -7837,6 +7837,11 @@ static const struct snd_kcontrol_new sec_mi2s_rx_port_mixer_controls[] = {
 	MSM_BACKEND_DAI_SECONDARY_MI2S_RX,
 	MSM_BACKEND_DAI_QUATERNARY_MI2S_TX, 1, 0, msm_routing_get_port_mixer,
 	msm_routing_put_port_mixer),
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	SOC_SINGLE_EXT("INT3_MI2S_TX", MSM_BACKEND_DAI_SECONDARY_MI2S_RX,
+	MSM_BACKEND_DAI_INT3_MI2S_TX, 1, 0, msm_routing_get_port_mixer,
+	msm_routing_put_port_mixer),
+#endif
 	SOC_DOUBLE_EXT("QUIN_MI2S_TX", SND_SOC_NOPM,
 	MSM_BACKEND_DAI_SECONDARY_MI2S_RX,
 	MSM_BACKEND_DAI_QUINARY_MI2S_TX, 1, 0, msm_routing_get_port_mixer,
@@ -7853,6 +7858,11 @@ static const struct snd_kcontrol_new sec_mi2s_rx_port_mixer_controls[] = {
 	MSM_BACKEND_DAI_SECONDARY_MI2S_RX,
 	MSM_BACKEND_DAI_INT_FM_TX, 1, 0, msm_routing_get_port_mixer,
 	msm_routing_put_port_mixer),
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	SOC_SINGLE_EXT("SLIM_7_TX", MSM_BACKEND_DAI_SECONDARY_MI2S_RX,
+	MSM_BACKEND_DAI_SLIMBUS_7_TX, 1, 0, msm_routing_get_port_mixer,
+	msm_routing_put_port_mixer),
+#endif
 	SOC_DOUBLE_EXT("SLIM_8_TX", SND_SOC_NOPM,
 	MSM_BACKEND_DAI_SECONDARY_MI2S_RX,
 	MSM_BACKEND_DAI_SLIMBUS_8_TX, 1, 0, msm_routing_get_port_mixer,
@@ -30464,10 +30474,16 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	{"SEC_MI2S_RX Port Mixer", "SEC_MI2S_TX", "SEC_MI2S_TX"},
 	{"SEC_MI2S_RX Port Mixer", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"SEC_MI2S_RX Port Mixer", "QUAT_MI2S_TX", "QUAT_MI2S_TX"},
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	{"SEC_MI2S_RX Port Mixer", "INT3_MI2S_TX", "INT3_MI2S_TX"},
+#endif
 	{"SEC_MI2S_RX Port Mixer", "QUIN_MI2S_TX", "QUIN_MI2S_TX"},
 	{"SEC_MI2S_RX Port Mixer", "SENARY_MI2S_TX", "SENARY_MI2S_TX"},
 	{"SEC_MI2S_RX Port Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
 	{"SEC_MI2S_RX Port Mixer", "INTERNAL_FM_TX", "INT_FM_TX"},
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	{"SEC_MI2S_RX Port Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
+#endif
 	{"SEC_MI2S_RX Port Mixer", "SLIM_8_TX", "SLIMBUS_8_TX"},
 #ifndef CONFIG_AUXPCM_DISABLE
 	{"SEC_MI2S_RX Port Mixer", "AUX_PCM_UL_TX", "AUX_PCM_TX"},

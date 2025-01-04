@@ -228,19 +228,34 @@ static bool msm_swap_gnd_mic(struct snd_soc_component *component, bool active);
 static struct wcd_mbhc_config mbhc_cfg = {
 	.read_fw_bin = false,
 	.calibration = NULL,
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	.detect_extn_cable = false,
+#else
 	.detect_extn_cable = true,
+#endif
 	.mono_stero_detection = false,
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	.key_code[1] = KEY_VOLUMEUP,
+	.key_code[2] = KEY_VOLUMEDOWN,
+	.key_code[3] = KEY_SAVE,
+#else
 	.key_code[1] = KEY_VOICECOMMAND,
 	.key_code[2] = KEY_VOLUMEUP,
 	.key_code[3] = KEY_VOLUMEDOWN,
+#endif
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
 	.key_code[7] = 0,
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	 /* do not detect lineout device */
+	.linein_th = 0,
+#else
 	.linein_th = 5000,
+#endif
 	.moisture_en = false,
 	.mbhc_micbias = 0,
 	.anc_micbias = 0,
@@ -264,7 +279,11 @@ static struct dev_config mi2s_rx_cfg[] = {
 
 static struct dev_config mi2s_tx_cfg[] = {
 	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	[SEC_MI2S]  = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
+#else
 	[SEC_MI2S]  = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
+#endif
 	[TERT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[QUAT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[QUIN_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
