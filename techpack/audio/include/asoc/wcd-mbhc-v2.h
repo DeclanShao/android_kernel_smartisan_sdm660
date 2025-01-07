@@ -655,9 +655,6 @@ void wcd_enable_curr_micbias(const struct wcd_mbhc *mbhc,
 			     const enum wcd_mbhc_cs_mb_en_flag cs_mb_en);
 void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 			  struct snd_soc_jack *jack, int status, int mask);
-#ifdef CONFIG_MACH_SMARTISAN_SDM660
-void wcd_cancel_fixup_hs_work(struct wcd_mbhc *mbhc);
-#endif
 int wcd_cancel_btn_work(struct wcd_mbhc *mbhc);
 int wcd_mbhc_get_button_mask(struct wcd_mbhc *mbhc);
 void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,

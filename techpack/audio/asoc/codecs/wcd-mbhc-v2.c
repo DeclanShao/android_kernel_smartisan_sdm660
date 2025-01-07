@@ -397,7 +397,6 @@ static void wcd_cancel_fixup_hs_work(struct wcd_mbhc *mbhc)
 	}
 	WCD_MBHC_RSC_LOCK(mbhc);
 }
-EXPORT_SYMBOL(wcd_cancel_fixup_hs_work);
 #endif
 
 int wcd_cancel_btn_work(struct wcd_mbhc *mbhc)
