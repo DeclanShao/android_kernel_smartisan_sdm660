@@ -1007,18 +1007,6 @@ static int msm_int_mclk0_event(struct snd_soc_dapm_widget *w,
 	pdata = snd_soc_card_get_drvdata(component->card);
 	pr_debug("%s: event = %d\n", __func__, event);
 	switch (event) {
-#ifdef CONFIG_MACH_SMARTISAN_SDM660
-	case SND_SOC_DAPM_PRE_PMU:
-		ret = msm_cdc_pinctrl_select_active_state(pdata->pdm_gpio_p);
-		if (ret < 0) {
-			pr_err("%s: gpio set cannot be activated %s\n",
-					__func__, "int_pdm");
-			return ret;
-		}
-		msm_int_enable_dig_cdc_clk(codec, 1, true);
-		msm_anlg_cdc_mclk_enable(codec, 1, true);
-		break;
-#endif
 	case SND_SOC_DAPM_PRE_PMU:
 		ret = msm_cdc_pinctrl_select_active_state(pdata->pdm_gpio_p);
 		if (ret < 0) {
