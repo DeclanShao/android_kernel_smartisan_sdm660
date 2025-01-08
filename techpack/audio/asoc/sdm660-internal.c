@@ -3202,14 +3202,14 @@ static struct snd_soc_card *msm_int_populate_sndcard_dailinks(
 		       sizeof(msm_int_wsa_dai));
 		len1 += ARRAY_SIZE(msm_int_wsa_dai);
 	}
-//todo
-#ifdef CONFIG_MACH_SMARTISAN_SDM660
-	memcpy(dailink + len1, maxim_fe_dai, sizeof(maxim_fe_dai));
-	len1 += ARRAY_SIZE(maxim_fe_dai);
-#else	
+	
 	memcpy(dailink + len1, msm_int_compress_capture_dai,
 		sizeof(msm_int_compress_capture_dai));
 	len1 += ARRAY_SIZE(msm_int_compress_capture_dai);
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	memcpy(dailink + len1, maxim_fe_dai, sizeof(maxim_fe_dai));
+	len1 += ARRAY_SIZE(maxim_fe_dai);
 #endif
 
 	memcpy(dailink + len1, msm_int_be_dai, sizeof(msm_int_be_dai));
