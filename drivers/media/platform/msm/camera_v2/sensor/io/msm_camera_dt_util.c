@@ -1304,6 +1304,7 @@ int msm_camera_pinctrl_init(
 	return 0;
 }
 
+#ifndef CONFIG_MACH_SMARTISAN_SDM660
 static int msm_cam_sensor_handle_reg_gpio(int seq_val,
 	struct msm_camera_gpio_conf *gconf, int val)
 {
@@ -1357,6 +1358,7 @@ static int msm_cam_sensor_handle_reg_gpio(int seq_val,
 	}
 	return 0;
 }
+#endif
 
 int32_t msm_sensor_driver_get_gpio_data(
 	struct msm_camera_gpio_conf **gpio_conf,
