@@ -497,6 +497,11 @@ struct fg_dev {
 	struct work_struct	esr_filter_work;
 	struct alarm		esr_filter_alarm;
 	ktime_t			last_delta_temp_time;
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	unsigned irq_wake;
+	struct delayed_work	update_soc_work;
+	int 			prev_soc;
+#endif
 };
 
 /* Debugfs data structures are below */
