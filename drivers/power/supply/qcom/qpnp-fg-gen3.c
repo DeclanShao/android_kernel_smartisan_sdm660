@@ -17,6 +17,9 @@
 #include <linux/qpnp/qpnp-misc.h>
 #include "fg-core.h"
 #include "fg-reg.h"
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#include "smb-lib.h"
+#endif
 
 #define FG_GEN3_DEV_NAME	"qcom,fg-gen3"
 
@@ -759,8 +762,13 @@ static int fg_batt_missing_config(struct fg_dev *fg, bool enable)
 {
 	int rc;
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	rc = fg_masked_write(fg, BATT_INFO_BATT_MISS_CFG(fg),
+			BM_FROM_THERM_BIT|BM_FROM_BATT_ID_BIT, enable ? BM_FROM_BATT_ID_BIT : 0);
+#else
 	rc = fg_masked_write(fg, BATT_INFO_BATT_MISS_CFG(fg),
 			BM_FROM_BATT_ID_BIT, enable ? BM_FROM_BATT_ID_BIT : 0);
+#endif
 	if (rc < 0)
 		pr_err("Error in writing to %04x, rc=%d\n",
 			BATT_INFO_BATT_MISS_CFG(fg), rc);
@@ -855,6 +863,10 @@ static int fg_get_batt_profile(struct fg_dev *fg)
 		fg->bp.vbatt_full_mv = -EINVAL;
 	}
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	fg->bp.vbatt_full_mv = 4402;
+#endif
+
 	data = of_get_property(profile_node, "qcom,fg-profile-data", &len);
 	if (!data) {
 		pr_err("No profile data available\n");
@@ -948,8 +960,18 @@ static int fg_delta_bsoc_irq_en_cb(struct votable *votable, void *data,
 	if (enable) {
 		enable_irq(fg->irqs[BSOC_DELTA_IRQ].irq);
 		enable_irq_wake(fg->irqs[BSOC_DELTA_IRQ].irq);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+		fg->irq_wake = 1;
+#endif
 	} else {
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+		if (fg->irq_wake) {
+#endif
 		disable_irq_wake(fg->irqs[BSOC_DELTA_IRQ].irq);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+			fg->irq_wake = 0;
+		}
+#endif
 		disable_irq_nosync(fg->irqs[BSOC_DELTA_IRQ].irq);
 	}
 
@@ -2333,6 +2355,30 @@ static void clear_cycle_counter(struct fg_dev *fg)
 	mutex_unlock(&chip->cyc_ctr.lock);
 }
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+int update_soc_period_ms = 20000;
+
+static void update_soc_work(struct work_struct *work)
+{
+	struct fg_dev *fg = container_of(work, struct fg_dev,
+			update_soc_work.work);
+	int msoc, rc = 0;
+	rc = fg_get_prop_capacity(fg, &msoc);
+	if (rc < 0) {
+		pr_err("Error in getting capacity, rc=%d\n", rc);
+		goto resched;
+	}
+	if (msoc != fg->prev_soc) {
+		fg->prev_soc = msoc;
+		if (fg->fg_psy)
+			power_supply_changed(fg->fg_psy);
+	}
+resched:
+	schedule_delayed_work(&fg->update_soc_work,
+			msecs_to_jiffies(update_soc_period_ms));
+}
+#endif
+
 static int fg_inc_store_cycle_ctr(struct fg_dev *fg, int bucket)
 {
 	struct fg_gen3_chip *chip = container_of(fg, struct fg_gen3_chip, fg);
@@ -2592,6 +2638,94 @@ static int fg_config_esr_sw(struct fg_dev *fg)
 	return 0;
 }
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#define HIGH_BATTERY_OCV        4095000
+#define HIGH_BATTERY_OCV_FCC    2400000
+#define DEFAULT_BATTERY_OCV_FCC 3400000
+static void high_battery_ocv_work(struct fg_dev *fg)
+{
+	static bool tried_once = false;
+	int vbatt_uv,rc;
+	rc = fg_get_sram_prop(fg, FG_SRAM_OCV, &vbatt_uv);
+	if (rc < 0) {
+		pr_err("failed to get battery voltage, rc=%d\n", rc);
+		vbatt_uv = HIGH_BATTERY_OCV;
+	}
+	if (vbatt_uv >= HIGH_BATTERY_OCV) {
+		if (!tried_once) {
+			rc = high_ocv_fcc_voter(HIGH_BATTERY_OCV_FCC);
+			if (rc) {
+				pr_err("failed to set fcc %d\n", rc);
+				return;
+			}
+			tried_once = true;
+		}
+	} else {
+		if (tried_once) {
+			rc = high_ocv_fcc_voter(DEFAULT_BATTERY_OCV_FCC);
+			if (rc) {
+				pr_err("failed to set fcc %d\n", rc);
+				return;
+			}
+			tried_once = false;
+		}
+	}
+}
+#define TEMP_BELOW_NEG_0          0
+#define TEMP_POS_0_TO_POS_15      1
+#define TEMP_POS_15_TO_POS_45     2
+#define TEMP_POS_45_TO_POS_60     3
+#define TEMP_ABOVE_POS_60         4
+#define TEMP_POS_60_THRESHOLD  60
+#define TEMP_POS_60_THRES_MINUS_X_DEGREE 58
+#define TEMP_POS_45_THRESHOLD  45
+#define TEMP_POS_45_THRES_MINUS_X_DEGREE 43
+#define TEMP_POS_0_THRESHOLD  0
+#define TEMP_POS_0_THRES_PLUS_X_DEGREE 2
+#define TEMP_POS_15_THRESHOLD  15
+#define TEMP_POS_15_THRES_PLUS_X_DEGREE 17
+int do_jeita_state_machine(int temperature)
+{
+	static int g_temp_status = TEMP_POS_15_TO_POS_45;
+	if (temperature >= TEMP_POS_60_THRESHOLD) {
+		g_temp_status = TEMP_ABOVE_POS_60;
+	} else if (temperature > TEMP_POS_45_THRESHOLD) {
+		if ((g_temp_status == TEMP_ABOVE_POS_60)
+				&& (temperature > TEMP_POS_60_THRES_MINUS_X_DEGREE)) {
+			g_temp_status = TEMP_ABOVE_POS_60;
+		} else {
+			g_temp_status = TEMP_POS_45_TO_POS_60;
+		}
+	} else if (temperature > TEMP_POS_15_THRESHOLD) {
+		if ((g_temp_status == TEMP_POS_45_TO_POS_60)
+				&& (temperature > TEMP_POS_45_THRES_MINUS_X_DEGREE)) {
+			g_temp_status = TEMP_POS_45_TO_POS_60;
+		} else if ((g_temp_status == TEMP_POS_0_TO_POS_15)
+				&& (temperature < TEMP_POS_15_THRES_PLUS_X_DEGREE)) {
+			g_temp_status = TEMP_POS_0_TO_POS_15;
+		} else {
+			g_temp_status = TEMP_POS_15_TO_POS_45;
+		}
+	} else if (temperature > TEMP_POS_0_THRESHOLD) {
+		if ((g_temp_status == TEMP_BELOW_NEG_0)
+				&& (temperature < TEMP_POS_0_THRES_PLUS_X_DEGREE)) {
+			g_temp_status = TEMP_BELOW_NEG_0;
+		} else {
+			g_temp_status = TEMP_POS_0_TO_POS_15;
+		}
+	} else {
+		g_temp_status = TEMP_BELOW_NEG_0;
+	}
+	return g_temp_status;
+}
+static void battery_jeita_work(int batt_temp)
+{
+	int status;
+	status = do_jeita_state_machine(batt_temp / 10);
+	jeita_fcc_voter(status);
+}
+#endif
+
 static void status_change_work(struct work_struct *work)
 {
 	struct fg_dev *fg = container_of(work,
@@ -2608,6 +2742,10 @@ static void status_change_work(struct work_struct *work)
 		fg_dbg(fg, FG_STATUS, "Profile load is not complete yet\n");
 		goto out;
 	}
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	high_battery_ocv_work(fg);
+#endif
 
 	rc = power_supply_get_property(fg->batt_psy, POWER_SUPPLY_PROP_STATUS,
 			&prop);
@@ -2672,6 +2810,10 @@ static void status_change_work(struct work_struct *work)
 			pr_err("Error in configuring ki_coeff_full_soc rc:%d\n",
 				rc);
 	}
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	battery_jeita_work(batt_temp);
+#endif
 
 	fg_ttf_update(fg);
 	fg->prev_charge_status = fg->charge_status;
@@ -5493,6 +5635,9 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	INIT_WORK(&fg->status_change_work, status_change_work);
 	INIT_WORK(&fg->esr_sw_work, fg_esr_sw_work);
 	INIT_DELAYED_WORK(&chip->ttf_work, ttf_work);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	INIT_DELAYED_WORK(&fg->update_soc_work, update_soc_work);
+#endif
 	INIT_DELAYED_WORK(&fg->sram_dump_work, sram_dump_work);
 	INIT_WORK(&fg->esr_filter_work, esr_filter_work);
 	alarm_init(&fg->esr_filter_alarm, ALARM_BOOTTIME,
@@ -5575,6 +5720,10 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	/* Keep BATT_MISSING_IRQ disabled until we require it */
 	vote(fg->batt_miss_irq_en_votable, BATT_MISS_IRQ_VOTER, false, 0);
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	fg->irq_wake = 0;
+#endif
+
 	fg_debugfs_create(fg);
 
 	rc = sysfs_create_groups(&fg->dev->kobj, fg_groups);
@@ -5600,6 +5749,10 @@ static int fg_gen3_probe(struct platform_device *pdev)
 
 	device_init_wakeup(fg->dev, true);
 	schedule_delayed_work(&fg->profile_load_work, 0);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	schedule_delayed_work(&fg->update_soc_work,
+                        msecs_to_jiffies(1000));
+#endif
 
 	pr_debug("FG GEN3 driver probed successfully\n");
 	return 0;
@@ -5621,6 +5774,9 @@ static int fg_gen3_suspend(struct device *dev)
 	rc = fg_esr_timer_config(fg, true);
 	if (rc < 0)
 		pr_err("Error in configuring ESR timer, rc=%d\n", rc);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	cancel_delayed_work(&fg->update_soc_work);
+#endif
 
 	cancel_delayed_work_sync(&chip->ttf_work);
 	if (fg_sram_dump)
@@ -5639,6 +5795,10 @@ static int fg_gen3_resume(struct device *dev)
 		pr_err("Error in configuring ESR timer, rc=%d\n", rc);
 
 	schedule_delayed_work(&chip->ttf_work, 0);
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	schedule_delayed_work(&fg->update_soc_work,
+                        msecs_to_jiffies(1000));
+#endif
 	if (fg_sram_dump)
 		schedule_delayed_work(&fg->sram_dump_work,
 				msecs_to_jiffies(fg_sram_dump_period_ms));
