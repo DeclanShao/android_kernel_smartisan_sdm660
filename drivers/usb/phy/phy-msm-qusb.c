@@ -206,6 +206,10 @@ struct qusb_phy {
 	u8			tune5;
 };
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+struct qusb_phy *qphy_g;
+#endif
+
 static void qusb_phy_enable_clocks(struct qusb_phy *qphy, bool on)
 {
 	dev_dbg(qphy->phy.dev, "%s(): on:%d\n", __func__, on);
@@ -416,6 +420,16 @@ err_vdd:
 
 	return ret;
 }
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+int smart_set_dp_dm_enable(void)
+{
+	if (qphy_g == NULL)
+		return -1;
+	return qusb_phy_update_dpdm(&qphy_g->phy,POWER_SUPPLY_DP_DM_DPF_DMF);
+}
+EXPORT_SYMBOL(smart_set_dp_dm_enable);
+#endif
 
 static void qusb_phy_get_tune2_param(struct qusb_phy *qphy)
 {
@@ -1605,6 +1619,10 @@ static int qusb_phy_probe(struct platform_device *pdev)
 	qphy = devm_kzalloc(dev, sizeof(*qphy), GFP_KERNEL);
 	if (!qphy)
 		return -ENOMEM;
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	qphy_g = qphy;
+#endif
 
 	qphy->phy.dev = dev;
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
