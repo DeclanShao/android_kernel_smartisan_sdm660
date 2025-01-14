@@ -12,6 +12,9 @@
 #include <linux/extcon-provider.h>
 #include "storm-watch.h"
 #include "battery.h"
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#include <linux/fb.h>
+#endif
 
 enum print_reason {
 	PR_INTERRUPT	= BIT(0),
@@ -58,6 +61,10 @@ enum print_reason {
 #define OTG_DELAY_VOTER			"OTG_DELAY_VOTER"
 #define USBIN_I_VOTER			"USBIN_I_VOTER"
 #define WEAK_CHARGER_VOTER		"WEAK_CHARGER_VOTER"
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#define HIGH_OCV_VOTER			"HIGH_OCV_VOTER"
+#define JEITA_VOTER				"JEITA_VOTER"
+#endif
 #define OTG_VOTER			"OTG_VOTER"
 #define PL_FCC_LOW_VOTER		"PL_FCC_LOW_VOTER"
 #define WBC_VOTER			"WBC_VOTER"
@@ -320,6 +327,14 @@ struct smb_charger {
 	int			system_temp_level;
 	int			thermal_levels;
 	int			*thermal_mitigation;
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	int			thermal_levels_usb;
+	int			*thermal_mitigation_usb_5v;
+	int			*thermal_mitigation_usb_6v;
+	int			*thermal_mitigation_usb_7v;
+	int			*thermal_mitigation_usb_8v;
+	int			*thermal_mitigation_usb_9v;
+#endif
 	int			dcp_icl_ua;
 	int			fake_capacity;
 	int			fake_batt_status;
@@ -376,6 +391,14 @@ struct smb_charger {
 	/* qnovo */
 	int			usb_icl_delta_ua;
 	int			pulse_cnt;
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	struct notifier_block	fb_notifier;
+	bool					fb_ready;
+	struct mutex			therm_lvl_lock;
+	struct delayed_work		therm_adjust_work;
+	int						therm_adjust_work_en;
+	int						last_therm_icl_ma;
+#endif
 
 	int			die_health;
 };
@@ -551,6 +574,12 @@ int smblib_stat_sw_override_cfg(struct smb_charger *chg, bool override);
 void smblib_usb_typec_change(struct smb_charger *chg);
 int smblib_toggle_stat(struct smb_charger *chg, int reset);
 int smblib_force_ufp(struct smb_charger *chg);
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+int high_ocv_fcc_voter(int current_ua);
+void jeita_fcc_voter(int status);
+bool get_warm_disable_charge(void);
+#endif
 
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);
