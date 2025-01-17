@@ -424,9 +424,65 @@ err_vdd:
 #ifdef CONFIG_MACH_SMARTISAN_SDM660
 int smart_set_dp_dm_enable(void)
 {
+	int ret = 0;
+
 	if (qphy_g == NULL)
 		return -1;
-	return qusb_phy_update_dpdm(&qphy_g->phy,POWER_SUPPLY_DP_DM_DPF_DMF);
+	
+	if (qphy_g->eud_enable_reg && readl_relaxed(qphy_g->eud_enable_reg)) {
+		dev_err(qphy_g->phy.dev, "eud is enabled\n");
+		return 0;
+	}
+
+	mutex_lock(&qphy_g->phy_lock);
+	if (!qphy_g->dpdm_enable) {
+		ret = qusb_phy_enable_power(qphy_g, true);
+		if (ret < 0) {
+			dev_dbg(qphy_g->phy.dev,
+				"dpdm regulator enable failed:%d\n", ret);
+			mutex_unlock(&qphy_g->phy_lock);
+			return ret;
+		}
+		qphy_g->dpdm_enable = true;
+		if (qphy_g->put_into_high_z_state) {
+			qusb_phy_set_tcsr_clamp(qphy_g);
+
+			qusb_phy_gdsc(qphy_g, true);
+			qusb_phy_enable_clocks(qphy_g, true);
+
+			dev_dbg(qphy_g->phy.dev, "RESET QUSB PHY\n");
+			qusb_phy_reset(qphy_g);
+
+			/*
+			 * Phy in non-driving mode leaves Dp and Dm
+			 * lines in high-Z state. Controller power
+			 * collapse is not switching phy to non-driving
+			 * mode causing charger detection failure. Bring
+			 * phy to non-driving mode by overriding
+			 * controller output via UTMI interface.
+			 */
+			writel_relaxed(TERM_SELECT | XCVR_SELECT_FS |
+				OP_MODE_NON_DRIVE,
+				qphy_g->base + QUSB2PHY_PORT_UTMI_CTRL1);
+			writel_relaxed(UTMI_ULPI_SEL |
+				UTMI_TEST_MUX_SEL,
+				qphy_g->base + QUSB2PHY_PORT_UTMI_CTRL2);
+
+
+			/* Disable PHY */
+			writel_relaxed(CLAMP_N_EN | FREEZIO_N |
+					POWER_DOWN,
+					qphy_g->base + QUSB2PHY_PORT_POWERDOWN);
+			/* Make sure that above write is completed */
+			wmb();
+
+			qusb_phy_enable_clocks(qphy_g, false);
+			qusb_phy_gdsc(qphy_g, false);
+		}
+	}
+	mutex_unlock(&qphy_g->phy_lock);
+
+	return ret;
 }
 EXPORT_SYMBOL(smart_set_dp_dm_enable);
 #endif
