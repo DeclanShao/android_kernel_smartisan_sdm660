@@ -44,12 +44,23 @@
 #include <linux/bitfield.h>
 #include <linux/blkdev.h>
 #include <linux/suspend.h>
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#include <soc/qcom/boot_stats.h>
+#endif
 #include "ufshcd.h"
 #include "ufs_quirks.h"
 #include "unipro.h"
 #include "ufs-sysfs.h"
 #include "ufs-debugfs.h"
 #include "ufs-qcom.h"
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#define HAS_A_UFS 0x11
+#define HAS_NO_UFS 0x01
+
+static int ufs_version = 0;
+int pro_flag = 0;
+#endif
 
 static bool ufshcd_wb_sup(struct ufs_hba *hba);
 static int ufshcd_wb_ctrl(struct ufs_hba *hba, bool enable);
@@ -1152,8 +1163,10 @@ static inline u32 ufshcd_get_intr_mask(struct ufs_hba *hba)
  */
 static inline u32 ufshcd_get_ufs_version(struct ufs_hba *hba)
 {
+#ifndef CONFIG_MACH_SMARTISAN_SDM660
 	if (hba->quirks & UFSHCD_QUIRK_BROKEN_UFS_HCI_VERSION)
 		return ufshcd_vops_get_ufs_hci_version(hba);
+#endif
 
 	return ufshcd_readl(hba, REG_UFS_VERSION);
 }
@@ -6001,7 +6014,11 @@ static int ufshcd_link_startup(struct ufs_hba *hba)
 
 	ret = ufshcd_make_hba_operational(hba);
 out:
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	if (ret && (get_ufs_flag() == HAS_A_UFS)) 
+#else
 	if (ret)
+#endif
 		dev_err(hba->dev, "link startup failed %d\n", ret);
 
 	return ret;
@@ -8486,6 +8503,16 @@ static int ufs_get_device_desc(struct ufs_hba *hba,
 		goto out;
 	}
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	if (desc_buf[DEVICE_DESC_PARAM_HIGH_PR_LUN] == 0x02)
+		pro_flag = 1;
+	else
+		pro_flag = 0;
+	hba->ufschip_version = desc_buf[DEVICE_DESC_PARAM_SPEC_VER] << 8 | desc_buf[DEVICE_DESC_PARAM_SPEC_VER + 1];
+	/*Get ufs_version*/
+	ufs_version = hba->ufschip_version;
+#endif
+
 	/*
 	 * getting vendor (manufacturerID) and Bank Index in big endian
 	 * format
@@ -8562,6 +8589,48 @@ out:
 	kfree(desc_buf);
 	return err;
 }
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+ssize_t ufs_provision_show(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+	return sprintf(buf, "%d\n", pro_flag);
+}
+DEVICE_ATTR_RO(ufs_provision);
+
+void ufshcd_add_sysfs_prov(struct ufs_hba *hba)
+{
+	device_create_file(hba->dev, &dev_attr_ufs_provision);
+}
+
+ssize_t ufs_version_show(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+	char *ufs_version_ptr= NULL;
+	switch(ufs_version)
+	{
+		case UFSHCI_VERSION_20: /* 2.0 */
+			ufs_version_ptr = "UFS2.0";
+			break;
+		case UFSHCI_VERSION_21: /* 2.1 */
+			ufs_version_ptr = "UFS2.1";
+			break;
+		case UFSHCI_VERSION_10: /* 1.0 */
+		case UFSHCI_VERSION_11: /* 1.1 */
+		default:
+			printk(KERN_ERR "%s: Failed getting ufs version 0x%x\n", __func__, ufs_version);
+			ufs_version_ptr = "unknown";
+			break;
+	}
+	return sprintf(buf, "%s\n", ufs_version_ptr);
+}
+DEVICE_ATTR_RO(ufs_version);
+
+void ufshcd_add_sysfs_version(struct ufs_hba *hba)
+{
+	device_create_file(hba->dev, &dev_attr_ufs_version);
+}
+#endif
 
 static void ufs_fixup_device_setup(struct ufs_hba *hba,
 				   struct ufs_dev_desc *dev_desc)
@@ -9060,6 +9129,12 @@ reinit:
 
 	ufs_fixup_device_setup(hba, &card);
 	ufshcd_tune_unipro_params(hba);
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	dev_info(hba->dev, "UFSCHIP version 0x%x\n", hba->ufschip_version);
+	if (hba->ufschip_version == 0x200)
+		ufs_qcom_set_disbale_lpm(hba, true);
+#endif
 
 	ufshcd_apply_pm_quirks(hba);
 	if (card.wspecversion < 0x300) {
@@ -11195,6 +11270,12 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	ufsdbg_add_debugfs(hba);
 
 	ufs_sysfs_add_nodes(hba->dev);
+
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	ufshcd_add_sysfs_prov(hba);
+
+	ufshcd_add_sysfs_version(hba);
+#endif
 
 	return 0;
 

@@ -1115,6 +1115,9 @@ struct ufs_hba {
 	bool phy_init_g4;
 	bool force_g4;
 	bool wb_enabled;
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+	int ufschip_version;
+#endif
 
 #ifdef CONFIG_SCSI_UFS_CRYPTO
 	/* crypto */

@@ -2139,6 +2139,21 @@ static void ufs_qcom_save_host_ptr(struct ufs_hba *hba)
 		dev_err(hba->dev, "invalid host index %d\n", id);
 }
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+int ufs_qcom_set_disbale_lpm(struct ufs_hba *hba, bool value)
+{
+	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+	if (value)
+		host->disable_lpm = 1;
+	else
+		host->disable_lpm = 0;
+	dev_info(hba->dev, "%s: disbale_lpm=%d \n", __func__, host->disable_lpm);
+	ufs_qcom_set_caps(hba);
+	ufs_qcom_advertise_quirks(hba);
+	return 0;
+}
+#endif
+
 /**
  * ufs_qcom_init - bind phy with controller
  * @hba: host controller instance
@@ -2959,6 +2974,7 @@ static int ufs_qcom_probe(struct platform_device *pdev)
 {
 	int err;
 	struct device *dev = &pdev->dev;
+#ifndef CONFIG_MACH_SMARTISAN_SDM660
 	struct device_node *np = dev->of_node;
 
 	/*
@@ -2977,6 +2993,7 @@ static int ufs_qcom_probe(struct platform_device *pdev)
 	    strlen(android_boot_dev) &&
 	    strcmp(android_boot_dev, dev_name(dev)))
 		return -ENODEV;
+#endif
 
 	/* Perform generic probe */
 	err = ufshcd_pltfrm_init(pdev, &ufs_hba_qcom_variant);

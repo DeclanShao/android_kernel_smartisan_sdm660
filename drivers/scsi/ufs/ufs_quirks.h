@@ -166,5 +166,9 @@ struct ufs_dev_fix {
  */
 #define UFS_DEVICE_QUIRK_PA_HIBER8TIME   (1 << 12)
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+void ufshcd_add_sysfs_prov(struct ufs_hba *hba);
+void ufshcd_add_sysfs_version(struct ufs_hba *hba);
+#endif
 
 #endif /* UFS_QUIRKS_H_ */
