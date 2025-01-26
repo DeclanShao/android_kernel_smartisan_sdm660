@@ -644,19 +644,18 @@ static int __init hwinfo_init(void)
 		printk(KERN_CRIT "%s:sysfs_create_group failed\n", __func__);
 	}
 
-	ptr_hv = (unsigned int *)smem_get_entry(SMEM_ID_VENDOR2, &len,
-          0, SMEM_ANY_HOST_FLAG);
+	ptr_hv = (unsigned int *)qcom_smem_get(QCOM_SMEM_HOST_ANY, SMEM_ID_VENDOR2, &len);
     if (ptr_hv == NULL) {
-          printk(KERN_CRIT "%s: smem_get_entry error \n", __func__);
-          WARN((ptr_hv==NULL), "hwinfo_init, smem_get_entry SMEM_ID_VENDOR2 failed");
+          printk(KERN_CRIT "%s: qcom_smem_get error \n", __func__);
+          WARN((ptr_hv==NULL), "hwinfo_init, qcom_smem_get SMEM_ID_VENDOR2 failed");
           return -EFAULT;
     }
     hwinfo_value = *(unsigned int *)ptr_hv;
     lpddr_mid_name = foreach_lpddr_table(hwinfo_value & 0xFF);
     WARN((lpddr_mid_name==NULL), "hwinfo:cannot recognize lpddr");
-    if (lpddr_mid_name==NULL)
+    if (lpddr_mid_name==NULL) {
         lpddr_mid_name = "Unknown";
-
+	}
 	sprintf(hwinfo[lpddr_manufacturer].hwinfo_buf,"%s", lpddr_mid_name);
 
 	/*cpu_type*/

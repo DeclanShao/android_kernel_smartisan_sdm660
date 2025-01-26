@@ -4,6 +4,10 @@
 
 #define QCOM_SMEM_HOST_ANY -1
 
+#ifdef CONFIG_MACH_SMARTISAN_SDM660
+#define SMEM_ID_VENDOR2		136
+#endif
+
 int qcom_smem_alloc(unsigned host, unsigned item, size_t size);
 void *qcom_smem_get(unsigned host, unsigned item, size_t *size);
 
