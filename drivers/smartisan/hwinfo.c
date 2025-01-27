@@ -632,7 +632,8 @@ EXPORT_SYMBOL(smartisan_hwinfo_register);
 static int __init hwinfo_init(void)
 {
 	struct kobject *k_hwinfo = NULL;
-	unsigned hwinfo_value = 0, len = 0;
+	unsigned hwinfo_value = 0;
+	size_t len = 0;
     unsigned int *ptr_hv = NULL;
     const char *lpddr_mid_name = NULL;
 
