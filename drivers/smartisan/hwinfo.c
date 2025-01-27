@@ -610,7 +610,7 @@ int get_hw_version_id(void)
 }
 EXPORT_SYMBOL(get_hw_version_id);
 
-static int set_emmc_sn(char *src)
+__attribute__((used)) static int set_emmc_sn(char *src)
 {
 	if(src == NULL)
 		return 0;
