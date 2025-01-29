@@ -234,4 +234,9 @@ source "drivers/gpu/msm/Kconfig"
 source "drivers/energy_model/Kconfig"
 
 source "drivers/smartisan/Kconfig"
+
+source "drivers/goodix/Kconfig"
+
+source "drivers/fpc/Kconfig"
+
 endmenu
