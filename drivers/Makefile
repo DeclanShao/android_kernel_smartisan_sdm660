@@ -193,5 +193,3 @@ obj-$(CONFIG_SIOX)		+= siox/
 obj-$(CONFIG_GNSS)		+= gnss/
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
 obj-$(CONFIG_SMARTISAN_HWINFO)    += smartisan/
-obj-$(CONFIG_INPUT_FINGERPRINT_GOODIX_GF3208)    += goodix/
-obj-$(CONFIG_INPUT_FINGERPRINT_FPC)    += fpc/
