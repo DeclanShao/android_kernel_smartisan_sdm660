@@ -314,12 +314,12 @@ static void nav_event_input(struct gf_dev *gf_dev, gf_nav_event_t nav_event)
 
 static irqreturn_t gf_irq(int irq, void *handle)
 {
+    struct gf_dev *gf_dev = &gf;
 #if defined(GF_NETLINK_ENABLE)
 	char msg = GF_NET_EVENT_IRQ;
 	__pm_wakeup_event(gf_dev->fp_wakelock, msecs_to_jiffies(WAKELOCK_HOLD_TIME));
 	sendnlmsg(&msg);
 #elif defined (GF_FASYNC)
-	struct gf_dev *gf_dev = &gf;
 	if (gf_dev->async)
 		kill_fasync(&gf_dev->async, SIGIO, POLL_IN);
 #endif
