@@ -656,18 +656,18 @@ static int __init hwinfo_init(void)
     WARN((lpddr_mid_name==NULL), "hwinfo:cannot recognize lpddr");
     if (lpddr_mid_name==NULL) {
         lpddr_mid_name = "Unknown";
+    }		
 
-        sprintf(hwinfo[lpddr_manufacturer].hwinfo_buf,"%s", lpddr_mid_name);
+    sprintf(hwinfo[lpddr_manufacturer].hwinfo_buf,"%s", lpddr_mid_name);
 
 	/*cpu_type*/
-        sprintf(hwinfo[CPU_TYPE].hwinfo_buf,"%s", (of_board_is_sdm660()?"sdm660":"sdm630"));
+    sprintf(hwinfo[CPU_TYPE].hwinfo_buf,"%s", (of_board_is_sdm660()?"sdm660":"sdm630"));
 
-        get_version_id();
+    get_version_id();
 
-        get_secure_boot_version();
+    get_secure_boot_version();
 
-        get_pon_reason();
-    }
+    get_pon_reason();
 
     get_fingerprint_id();
     return 0;
