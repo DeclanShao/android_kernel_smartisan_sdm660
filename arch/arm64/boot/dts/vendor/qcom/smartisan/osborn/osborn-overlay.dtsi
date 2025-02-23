@@ -10,6 +10,7 @@
 #include "oscar-common.dtsi"
 #include "osborn-leds.dtsi"
 #include "osborn-unused-gpio.dtsi"
+#include "osborn-ramoops.dtsi"
 
 &sdc2_cd_on {
 	config {
