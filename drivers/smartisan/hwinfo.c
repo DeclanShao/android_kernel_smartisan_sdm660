@@ -660,7 +660,7 @@ static int __init hwinfo_init(void)
 
     get_pon_reason();
 
-    get_fingerprint_id();
+    /* get_fingerprint_id(); */
     return 0;
 }
 
