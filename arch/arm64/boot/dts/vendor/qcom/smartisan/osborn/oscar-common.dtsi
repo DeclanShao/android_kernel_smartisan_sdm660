@@ -118,3 +118,9 @@
 	qcom,platform-reset-gpio = <&tlmm 53 0>;
 	qcom,platform-te-gpio = <&tlmm 59 0>;
 };
+
+&soc {
+	restart@10ac000 {
+		qcom,force-warm-reboot;
+	};
+};
