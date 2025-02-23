@@ -610,15 +610,6 @@ int get_hw_version_id(void)
 }
 EXPORT_SYMBOL(get_hw_version_id);
 
-__attribute__((used)) static int set_emmc_sn(char *src)
-{
-	if(src == NULL)
-		return 0;
-	sprintf(hwinfo[emmc_sn].hwinfo_buf, "%s", src);
-	return 1;
-}
-__setup("androidboot.serialno=", set_emmc_sn);
-
 int smartisan_hwinfo_register(enum HWINFO_E e_hwinfo,char *hwinfo_name)
 {
 	if((e_hwinfo >= HWINFO_MAX) || (hwinfo_name == NULL))
