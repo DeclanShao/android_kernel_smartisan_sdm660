@@ -317,13 +317,13 @@ static int get_speaker_mfr(void)
 	return 0;
 }
 #endif
-extern char *fingerprint_id;
+/* extern char *fingerprint_id;
 static void get_fingerprint_id(void)
 {
     if(fingerprint_id != NULL)
         strncpy(hwinfo[FP_MFR].hwinfo_buf, fingerprint_id,
                 ((strlen(fingerprint_id) >= sizeof(hwinfo[FP_MFR].hwinfo_buf)? sizeof(hwinfo[FP_MFR].hwinfo_buf):strlen(fingerprint_id))));
-}
+} */
 
 #define UFS_SIZE_FILE   "/sys/block/sda/size"
 #define UFS_MANFID_FILE "/sys/block/sda/device/vendor"
